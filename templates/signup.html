@@ -40,17 +40,28 @@
         input[type="submit"]:hover {
             background-color: #45a049;
         }   
+        .message_container ul {
+            list-style-type: none;
+            padding: 0;
+            font-size: larger;
+            color: red;
+        }       
     </style>
 </head>
 <body>
     <center>
         
+    <div class="message_container">
         {% if messages %}
-        <div class="container">
-        
-                <p style="color:green;">{{ messages }}</p>
-           
-        </div> {% endif %}
+    <ul>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+{% endif %}
+
+    </div>
+
   
     <div class="container">
           <h1 style="color: rgba(0, 0, 0, 0.422);">Sign Up</h1>  

@@ -1,171 +1,67 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify OTP</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #f4f4f4;
-        }
-        h2 {
-            color: #333;
-        }
-        form {
-            background: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        input[type="email"], input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-    </style>
-
-</head>
-<body>
-    <h2>Verify Your Email</h2>
-    <form id="otpForm">
-       {% csrf_token %}
-         <p>Email: {{ request.GET.email }}</p>
-         <input type="hidden" name="email" value="{{ request.GET.email }}">
-        <input type="text" id="otp" name="otp" placeholder="Enter OTP" required><br><br>
-        <button type="submit">Verify OTP</button>
-    </form>
-
-    <script>
-        document.getElementById('otpForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const response = await fetch('/verify-otp/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email: document.getElementById('email').value,
-                    otp: document.getElementById('otp').value
-                })
-            });
-            const data = await response.json();
-            alert(data.message);
-            if (data.message === "Email verified successfully") {
-                window.location.href = "/login/"; // redirect to login
-            }
-        });
-    </script>
-</body>
-</html> -->
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify OTP</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background: linear-gradient(to right, #6a11cb, #2575fc);
-            margin: 0;
-        }
-        .container {
-            background: #fff;
-            padding: 30px 40px;
-            border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-            text-align: center;
-            width: 350px;
-        }
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        p {
-            font-size: 0.95rem;
-            color: #555;
-        }
-        input[type="text"] {
-            width: 90%;
-            padding: 12px;
-            margin: 15px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
+        body { 
+            font-family: Arial;
+             display:flex; 
+             justify-content:center;
+              align-items:center; 
+              height:100vh;
+               background:#f0f0f0; }
+        .container { 
+            background:#fff; 
+            padding:30px; 
+            border-radius:10px; 
+            box-shadow:0 5px 15px rgba(0,0,0,0.2); 
+            width:350px; 
+            text-align:center; }
+        input { 
+            width:90%;
+            padding:10px; 
+            margin:10px 0; 
+            border-radius:5px; 
+            border:1px solid #ccc; }
         button {
-            width: 50%;
-            margin-left:2vh;
-            padding: 12px;
-            background: #2575fc;
-            color: white;
-            font-size: 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+             padding:10px 20px; 
+             background:#2575fc; 
+             color:#fff; 
+             border:none; 
+             border-radius:5px; 
+             cursor:pointer; }
         button:hover {
-            background: #6a11cb;
-        }
+             background:#6a11cb; }
+        ul { 
+            list-style:none; 
+            padding:0;
+             color:red; }
     </style>
 </head>
 <body>
+
+     <div class="message_container">
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+     </div>
     <div class="container">
         <h2>Verify Your Email</h2>
-        <form id="otpForm">
+
+        
+
+        <form method="POST" action="{% url 'verify_otp' %}">
             {% csrf_token %}
-            <p>{{ request.GET.email }}</p>
-            <input type="hidden" id="email" name="email" value="{{ request.GET.email }}">
-            <input type="text" id="otp" name="otp" placeholder="Enter OTP" required>
+            <p>Email: {{ email }}</p>
+            <input type="text" name="otp" placeholder="Enter OTP" required>
+            <br>
             <button type="submit">Verify OTP</button>
         </form>
     </div>
-
-    <script>
-        document.getElementById('otpForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const email = document.getElementById('email').value;
-            const otp = document.getElementById('otp').value;
-
-            const response = await fetch('/verify-otp/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-                body: JSON.stringify({ email, otp })
-            });
-
-            const data = await response.json();
-            alert(data.message);
-
-            if (data.message === "Email verified successfully") {
-                window.location.href = "/login/";
-            }
-        });
-    </script>
 </body>
 </html>

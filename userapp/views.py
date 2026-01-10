@@ -1,155 +1,361 @@
-from django.shortcuts import render, redirect
-from rest_framework.decorators import api_view
-from rest_framework.response import Response as response
 from django.contrib.auth import authenticate, login, logout, get_user_model
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
-from django.contrib import messages
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import permission_classes
-import random 
-import time
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required,user_passes_test
+import json
+import random, time
 
 User = get_user_model()
+
+
+# Temporary OTP store
 OTP_STORE = {}
+OTP_VALIDITY = 300  # 5 minutes
 
+def generate_otp(email):
+    otp = random.randint(100000, 999999)
+    OTP_STORE[email] = {
+        "otp": otp,
+        "timestamp": time.time()
+    }
+    print(f"OTP for {email}: {otp}")  # Console shows OTP for Postman
+    return otp
 
-@api_view(['GET'])
+@csrf_exempt
 def index(request):
-    return render(request, 'index.html',{'request':request})
+    return JsonResponse({"status": "success", "message": "Welcome to User Management System"})
 
 
 
-@api_view(['GET', 'POST'])
+
+@csrf_exempt
 def user_signup(request):
-    if request.method == 'GET':
-        return render(request, 'signup.html')  # browser form
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST requests allowed"}, status=405)
 
-   
-    username = request.data.get('username')
-    email = request.data.get('email')
-    password = request.data.get('password')
+    import json
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
 
     if not username or not email or not password:
-        return response({'message': 'All fields are required'}, status=400)
+        return JsonResponse({"status": "error", "message": "All fields are required"}, status=400)
+
+    if User.objects.filter(username=email).exists():
+        return JsonResponse({"status": "error", "message": "Username already exists"}, status=400)
 
     if User.objects.filter(email=email).exists():
-        return response({'message': 'Email already exists'}, status=400)
+        return JsonResponse({"status": "error", "message": "Email already exists"}, status=400)
+
+    # Create inactive user
+    user = User.objects.create_user(username=username, email=email, password=password)
+    user.is_active = False
+    user.save()
+
+    # Generate OTP
+    generate_otp(email)
+
+    return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
+
+
+
+
+@csrf_exempt
+def verify_otp(request):
+    if request.method != 'POST':
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    email = data.get('email')
+    otp = data.get('otp')
+
+    if not email or not otp:
+        return JsonResponse({"status": "error", "message": "Email and OTP required"}, status=400)
+
+    stored = OTP_STORE.get(email)
+    if not stored:
+        return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=400)
+
+    if time.time() - stored['timestamp'] > OTP_VALIDITY:
+        OTP_STORE.pop(email)
+        return JsonResponse({"status": "error", "message": "OTP expired"}, status=400)
+
+    if str(stored['otp']) != str(otp):
+        return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=400)
+
+    try:
+        user = User.objects.get(email=email)
+        user.is_active = True
+        user.save()
+        OTP_STORE.pop(email)
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+
+    return JsonResponse({"status": "success", "message": "Email verified successfully"})
+
+
+@csrf_exempt
+def resend_otp(request):
+    email = request.session.get('verify_email')
+    if not email:
+        return JsonResponse({"status": "error", "message": "Session expired. Please signup again."})
 
     otp = random.randint(100000, 999999)
-
     OTP_STORE[email] = {'otp': otp, 'timestamp': time.time()}
 
-  
-    user = User.objects.create_user(username=email, email=email, password=password, is_active=False)
     send_mail(
-        "OTP Verification",
-        f"Your OTP code is {otp}",
+        "Resend OTP Verification",
+        f"Your new OTP is {otp}",
         'noreply@example.com',
         [email],
     )
-    return redirect(f'/verify-otp/?email={email}')  
+
+    return JsonResponse({"status": "success", "message": f"New OTP sent to {email}"})
 
 
-@api_view(['GET', 'POST'])
-def verify_otp(request):
-    if request.method == 'GET':
-        return render(request, 'verify_otp.html') 
-    OTP_VALIDITY = 3 * 60 
-    email = request.data.get('email')
-    otp = int(request.data.get('otp'))
-    
-    
-    stored = OTP_STORE.get(email)
-    if not stored:
-        return response({'message': 'Invalid OTP'}, status=400)
-    
-    if time.time() - stored['timestamp'] > OTP_VALIDITY:
-            OTP_STORE.pop(email)
-            return response({'message': 'OTP expired'}, status=400)
-    if stored['otp'] != otp:
-             return response({'message': 'Invalid OTP'}, status=400)
-    
-    user = User.objects.get(email=email)
-    user.is_active = True
-    user.is_verified = True
-    user.save()
-
-    OTP_STORE.pop(email)
-    return response({'message': 'Email verified successfully'})
-
-@api_view(['GET', 'POST'])
+@csrf_exempt
 def login_view(request):
-    if request.method == 'GET':
-        return render(request, 'login.html')
+    if request.method != 'POST':
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
 
-    email = request.POST.get('email')
-    password = request.POST.get('password')
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    email = data.get('email')
+    password = data.get('password')
 
     if not email or not password:
-        return response({'message': 'Email and password are required'}, status=400)
+        return JsonResponse({"status": "error", "message": "Email and password are required"}, status=400)
 
-    user = authenticate(request, email=email, password=password)
-
-    if user is None:
-        return response({'message': 'Invalid credentials'}, status=401)
+    user = authenticate(request, username=email, password=password)  # or use username=email if auth backend supports
+    if not user:
+        return JsonResponse({"status": "error", "message": "Invalid credentials"}, status=401)
 
     if not user.is_active:
-        return response({'message': 'Account not verified'}, status=403)
+        return JsonResponse({"status": "error", "message": "Account not verified"}, status=403)
+
+    if getattr(user, 'is_blocked', False):
+        return JsonResponse({"status": "error", "message": "Your account has been blocked. Contact admin."}, status=403)
 
     login(request, user)
 
-    refresh = RefreshToken.for_user(user)
+    if user.is_superuser:
+        return JsonResponse({
+        "status": "success",
+        "message": "Admin logged in successfully",
+        "admin_dashboard_url": "/admin/dashboard/"  # Postman can use this next
+    })
+    else:
+        return JsonResponse({"status": "success", "message": "user Logged in successfully"})
 
-    return redirect('home')
 
-
-
-
+@csrf_exempt
 def logout_view(request):
     logout(request)
-    messages.success(request, "Logged out successfully")
-    return redirect('user_login')
+    return JsonResponse({"status": "success", "message": "Logged out successfully"})
 
-@api_view(['GET'])
+
+@login_required
 def home(request):
- 
-    if not request.user.is_authenticated:
-        return redirect('/login/') 
-   
-    return render(request, 'home.html')
+    return JsonResponse({"status": "success", "message": f"Welcome {request.user.username}"})
 
-@api_view(['POST'])
+@csrf_exempt
 def forgot_password(request):
-        email = request.data.get("email")
-        if not User.objects.filter(email=email).exists():
-            return response({'message': 'Email does not exist'}, status=404)
+    if request.method != 'POST':
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
 
-        otp = random.randint(100000, 999999)
-        OTP_STORE[email] = otp
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
-        send_mail(
-            "Password Reset OTP",
-            f"Your password reset OTP code is {otp}",
-            'noreply@example.com',
-            [email]
-        )
-        return render(request,'verify_otp.html',{'email':email})
+    email = data.get('email')
+    if not email:
+        return JsonResponse({"status": "error", "message": "Email is required"}, status=400)
+
+    if not User.objects.filter(email=email).exists():
+        return JsonResponse({"status": "error", "message": "Email does not exist"}, status=404)
+
+    otp = random.randint(100000, 999999)
+    OTP_STORE[email] = {'otp': otp, 'timestamp': time.time()}
+
+    # For now, print OTP in console for Postman testing
+    print(f"[DEBUG] OTP for {email}: {otp}")
+
+    
+    send_mail(
+        "Password Reset OTP",
+        f"Your OTP is {otp}",
+        'noreply@example.com',
+        [email],
+    )
+
+    request.session['reset_email'] = email
+    print("OTP_STORE contents:", OTP_STORE)
+    print("Session email:", request.session.get('reset_email'))
+    return JsonResponse({"status": "success", "message": f"OTP sent to {email}"})
+
+    
 
 
 
-@api_view(['POST'])
+@csrf_exempt
 def reset_password(request):
-        email = request.data.get("email")
-        otp = int(request.data.get("otp"))
-        new_password = request.data.get("new_password")
+    if request.method != 'POST':
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
 
-        if OTP_STORE.get(email) != otp:
-            return response({'message': 'Invalid OTP'}, status=400)
+    # Get email from session
+    email = request.session.get('reset_email')
+    if not email:
+        return JsonResponse({"status": "error", "message": "Session expired. Please try again."}, status=400)
 
+    # Parse JSON from request body
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    otp_input = data.get('otp')
+    new_password = data.get('new_password')
+
+    if not otp_input or not new_password:
+        return JsonResponse({"status": "error", "message": "OTP and new password are required"}, status=400)
+
+    stored = OTP_STORE.get(email)
+    if not stored:
+        return JsonResponse({"status": "error", "message": "OTP not found. Request again."}, status=400)
+
+    if str(stored['otp']) != str(otp_input):
+        return JsonResponse({"status": "error", "message": "Invalid OTP"}, status=400)
+
+    if time.time() - stored['timestamp'] > OTP_VALIDITY:
+        OTP_STORE.pop(email)
+        return JsonResponse({"status": "error", "message": "OTP expired. Request again."}, status=400)
+
+    try:
         user = User.objects.get(email=email)
         user.set_password(new_password)
         user.save()
 
         OTP_STORE.pop(email)
-        return response({'message': 'Password reset successfully'})
+        request.session.flush()  # clear session after password reset
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+
+    return JsonResponse({"status": "success", "message": "Password reset successful ,login with new password"})
+
+
+
+
+#Admin Views 
+
+def is_admin(user):
+    return user.is_superuser
+
+
+
+# --------------------
+# View / Search Users
+# --------------------
+from django.db.models import Q
+
+@login_required
+@user_passes_test(is_admin)
+def admin_dashboard(request):
+    search_query = request.GET.get("search", "")
+    users = User.objects.all()
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) | Q(email__icontains=search_query)
+        )
+
+    users_data = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "is_active": u.is_active,
+            "is_blocked": getattr(u, "is_blocked", False),
+            "is_superuser": u.is_superuser
+        }
+        for u in users
+    ]
+    return JsonResponse({"status": "success", "users": users_data})
+
+
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def edit_user(request, user_id): #edit user details
+    if request.method != "PUT":
+        return JsonResponse({"status": "error", "message": "Only PUT allowed"}, status=405)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    username = data.get("username")
+    email = data.get("email")
+    is_active = data.get("is_active")
+
+    if username:
+        user.username = username
+    if email:
+        user.email = email
+    if is_active is not None:
+        user.is_active = is_active
+
+    user.save()
+    print("Request body:", request.body)
+
+    return JsonResponse({"status": "success", "message": "User updated successfully"})
+
+
+
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def block_user(request, user_id):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    block = data.get("block", True)
+    setattr(user, "is_blocked", bool(block))
+    user.save()
+
+    status_msg = "blocked" if block else "unblocked"
+    return JsonResponse({"status": "success", "message": f"User {status_msg} successfully"})
+
+
+
