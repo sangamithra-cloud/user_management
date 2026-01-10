@@ -1,0 +1,18 @@
+# Core
+Django>=4.2,<5.0
+djangorestframework>=3.14,<4.0
+
+# Database drivers
+psycopg2-binary>=2.9  # PostgreSQL
+mysqlclient>=2.1      # MySQL
+
+# Environment management
+python-dotenv>=1.0
+
+# Authentication & security
+django-allauth>=1.0
+
+# Misc tools
+Pillow>=10.0           # For image handling
+django-crispy-forms>=2.0
+gunicorn>=21.0         # For deployment
