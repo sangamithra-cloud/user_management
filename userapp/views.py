@@ -126,12 +126,16 @@ def resend_otp(request):
     otp = random.randint(100000, 999999)
     OTP_STORE[email] = {'otp': otp, 'timestamp': time.time()}
 
-    send_mail(
-        "Resend OTP Verification",
-        f"Your new OTP is {otp}",
-        'noreply@example.com',
-        [email],
-    )
+    try:
+        send_mail(
+            "Your OTP Verification Code",
+            f"Hello {username},\n\nYour OTP is: {otp}\nIt is valid for 5 minutes.",
+            "sangamithra@uniqnex360.com",  
+            [email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": "Failed to send OTP email"}, status=500)
 
     return JsonResponse({"status": "success", "message": f"New OTP sent to {email}"})
 
