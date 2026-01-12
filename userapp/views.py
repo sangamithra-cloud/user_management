@@ -1,10 +1,12 @@
+from time import time
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required,user_passes_test
 import json
-import random, time
+import random
+import time
 
 User = get_user_model()
 
@@ -72,6 +74,7 @@ def user_signup(request):
      
         return JsonResponse({"status": "error", "message": "Failed to send OTP email"}, status=500)
     request.session['verify_email'] = email
+    request.session['username'] = username
     request.session.set_expiry(300) 
 
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
@@ -120,6 +123,7 @@ def verify_otp(request):
 @csrf_exempt
 def resend_otp(request):
     email = request.session.get('verify_email')
+    username = request.session.get('username')
     if not email:
         return JsonResponse({"status": "error", "message": "Session expired. Please signup again."})
 
