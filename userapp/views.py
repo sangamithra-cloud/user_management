@@ -34,7 +34,6 @@ def user_signup(request):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Only POST requests allowed"}, status=405)
 
-    import json
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -59,7 +58,20 @@ def user_signup(request):
     user.save()
 
     # Generate OTP
-    generate_otp(email)
+    otp=generate_otp(email)
+
+    try:
+        send_mail(
+            "Your OTP Verification Code",
+            f"Hello {username},\n\nYour OTP is: {otp}\nIt is valid for 5 minutes.",
+            "sangamithra@uniqnex360.com",  
+            [email],
+            fail_silently=False,
+        )
+    except Exception as e:
+     
+        return JsonResponse({"status": "error", "message": "Failed to send OTP email"}, status=500)
+
 
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
 
@@ -155,7 +167,7 @@ def login_view(request):
         return JsonResponse({
         "status": "success",
         "message": "Admin logged in successfully",
-        "admin_dashboard_url": "/admin/dashboard/"  # Postman can use this next
+        "admin_dashboard_url": "/admin/dashboard/"  #
     })
     else:
         return JsonResponse({"status": "success", "message": "user Logged in successfully"})
@@ -191,8 +203,8 @@ def forgot_password(request):
     otp = random.randint(100000, 999999)
     OTP_STORE[email] = {'otp': otp, 'timestamp': time.time()}
 
-    # For now, print OTP in console for Postman testing
-    print(f"[DEBUG] OTP for {email}: {otp}")
+   
+   
 
     
     send_mail(
@@ -203,8 +215,7 @@ def forgot_password(request):
     )
 
     request.session['reset_email'] = email
-    print("OTP_STORE contents:", OTP_STORE)
-    print("Session email:", request.session.get('reset_email'))
+  
     return JsonResponse({"status": "success", "message": f"OTP sent to {email}"})
 
     
@@ -266,11 +277,6 @@ def is_admin(user):
 
 
 
-# --------------------
-# View / Search Users
-# --------------------
-from django.db.models import Q
-
 @login_required
 @user_passes_test(is_admin)
 def admin_dashboard(request):
@@ -326,7 +332,7 @@ def edit_user(request, user_id): #edit user details
         user.is_active = is_active
 
     user.save()
-    print("Request body:", request.body)
+   
 
     return JsonResponse({"status": "success", "message": "User updated successfully"})
 

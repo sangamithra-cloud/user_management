@@ -97,7 +97,15 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # needed for collectstatic 
 AUTH_USER_MODEL = 'userapp.User'
 
 # EMAIL SETTINGS
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587 
+EMAIL_HOST_USER = 'sangamithra@uniqnex360.com'
+EMAIL_HOST_PASSWORD = 'yegq wfcx emaq kdtv'  
+
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@example.com'
 
 # LOGIN/LOGOUT REDIRECTS
