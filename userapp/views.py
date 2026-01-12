@@ -71,7 +71,8 @@ def user_signup(request):
     except Exception as e:
      
         return JsonResponse({"status": "error", "message": "Failed to send OTP email"}, status=500)
-
+    request.session['verify_email'] = email
+    request.session.set_expiry(300) 
 
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
 

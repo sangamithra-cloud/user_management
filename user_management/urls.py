@@ -26,7 +26,7 @@ urlpatterns = [
     path('verify-otp/', views.verify_otp, name='verify_otp'),     # /verify-otp/
     path('login/', views.login_view, name='user_login'),           # /login/
     path('logout/', views.logout_view, name='logout'),            # /logout/
-    path('home/', views.home, name='home'),                        # /home/
+    path('resend-otp/', views.resend_otp, name='resend_otp'),      # /resend-otp/
     path('forgot-password/', views.forgot_password, name='forgot_password'), # /forgot-password/
     path('reset-password/', views.reset_password, name='reset_password'),    # /reset-password/
 
