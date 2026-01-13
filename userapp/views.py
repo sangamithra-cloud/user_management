@@ -26,6 +26,11 @@ def generate_otp(email):
     print(f"OTP for {email}: {otp}")  # Console shows OTP for Postman
     return otp
 
+
+@csrf_exempt
+def health_check(request):
+    return JsonResponse({"status": "ok", "message": "Service is running"})
+
 @csrf_exempt
 def index(request):
     return JsonResponse({"status": "success", "message": "Welcome to User Management System"})
@@ -530,3 +535,57 @@ def delete_product(request, product_id):
     product.delete()
 
     return JsonResponse({"status": "success", "message": "Product deleted successfully"})   
+
+
+# User view to see products
+@csrf_exempt
+@login_required
+def user_view_products(request):
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Only GET allowed"}, status=405)
+    products = Product.objects.all()
+    products_data = [       
+        {
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "brand": p.brand,
+            "category": p.category,
+            "price": str(p.price),
+            "stock": p.stock,
+            "created_at": p.created_at,
+            "updated_at": p.updated_at
+        }
+        for p in products
+    ]   
+    return JsonResponse({"status": "success,To view all the products", "products": products_data})
+
+@csrf_exempt
+@login_required 
+def add_to_cart(request):
+    pass  # Implement cart addition logic here  
+
+@csrf_exempt
+@login_required
+def view_cart(request):
+    pass  # Implement cart viewing logic here   
+
+@csrf_exempt
+@login_required
+def remove_from_cart(request):
+    pass  # Implement cart removal logic here
+
+@csrf_exempt
+@login_required 
+def add_to_wishlist(request):
+    pass  # Implement wishlist addition logic here  
+
+@csrf_exempt
+@login_required
+def view_wishlist(request):
+    pass  # Implement wishlist viewing logic here
+
+@csrf_exempt
+@login_required 
+def remove_from_wishlist(request):
+    pass  # Implement wishlist removal logic here

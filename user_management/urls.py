@@ -20,6 +20,7 @@ from django.contrib import admin
 
 
 urlpatterns = [
+    path('health/', views.health_check, name='health_check'),
     path('admin/', admin.site.urls),   #built-in admin route
     path('',views.index, name='index'),                           # /
     path('signup/', views.user_signup, name='user_signup'),        # /signup/
@@ -42,6 +43,7 @@ urlpatterns = [
     path('admin-dashboard/products/<int:product_id>/edit/', views.edit_product, name='edit_product'), # Edit product
     path('admin-dashboard/products/<int:product_id>/delete/', views.delete_product, name='delete_product'), # Delete product
 
-
+    # User routes
+    path("user/products/", views.user_view_products, name="user_view_products"),  # View products
 
 ]
