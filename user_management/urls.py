@@ -30,10 +30,18 @@ urlpatterns = [
     path('forgot-password/', views.forgot_password, name='forgot_password'), # /forgot-password/
     path('reset-password/', views.reset_password, name='reset_password'),    # /reset-password/
 
-    
+    #admin can edit and block user routes
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),       # View/Search users
     path('admin-dashboard/users/<int:user_id>/', views.edit_user, name='edit_user'),   # Edit user details
-    path('admin-dashboard/users/<int:user_id>/block/', views.block_user, name='block_user'),
- # Block/Unblock user
+    path('admin-dashboard/users/<int:user_id>/block/', views.block_user, name='block_user'),# Block/Unblock user
+   
+   # ADMIN  Product management routes
+    path('admin-dashboard/products/add/', views.add_product, name='add_product'),   # Add product
+    path('admin-dashboard/products/', views.view_all_product, name='view_products'),  # View all products
+    path('admin-dashboard/products/<int:product_id>/', views.view_product, name='view_product'), # View product details
+    path('admin-dashboard/products/<int:product_id>/edit/', views.edit_product, name='edit_product'), # Edit product
+    path('admin-dashboard/products/<int:product_id>/delete/', views.delete_product, name='delete_product'), # Delete product
+
+
 
 ]

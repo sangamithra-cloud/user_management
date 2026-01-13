@@ -7,6 +7,8 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 import json
 import random
 import time
+from .models import Product
+ 
 
 User = get_user_model()
 
@@ -315,7 +317,7 @@ def admin_dashboard(request):
 @csrf_exempt
 @login_required
 @user_passes_test(is_admin)
-def edit_user(request, user_id): #edit user details
+def edit_user(request, user_id): #Admin can edit user details
     if request.method != "PUT":
         return JsonResponse({"status": "error", "message": "Only PUT allowed"}, status=405)
 
@@ -373,4 +375,158 @@ def block_user(request, user_id):
     return JsonResponse({"status": "success", "message": f"User {status_msg} successfully"})
 
 
+#add product 
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def add_product(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
 
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    name = data.get("name")
+    description = data.get("description")
+    brand = data.get("brand")
+    category = data.get("category")
+    price = data.get("price")
+    stock = data.get("stock")
+
+    if not all([name, description, brand, category, price, stock]):
+        return JsonResponse({"status": "error", "message": "All fields are required"}, status=400)
+
+    try:
+        price = float(price)
+        stock = int(stock)
+    except ValueError:
+        return JsonResponse({"status": "error", "message": "Invalid price or stock value"}, status=400)
+
+    from userapp.models import Product  # Import here to avoid circular import
+
+    product = Product.objects.create(
+        name=name,
+        description=description,
+        brand=brand,
+        category=category,
+        price=price,
+        stock=stock
+    )
+
+    return JsonResponse({"status": "success", "message": "Product added successfully", "product_id": product.id})
+
+#to view all products
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def view_all_product(request):
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Only GET allowed"}, status=405)
+    products = Product.objects.all()
+    products_data = [       
+        {
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "brand": p.brand,
+            "category": p.category,
+            "price": str(p.price),
+            "stock": p.stock,
+            "created_at": p.created_at,
+            "updated_at": p.updated_at
+        }
+        for p in products
+    ]   
+    return JsonResponse({"status": "success,To view all the products", "products": products_data})  
+
+#to view a single product details
+@csrf_exempt
+@login_required     
+@user_passes_test(is_admin)
+def view_product(request, product_id):
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Only GET allowed"}, status=405)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+
+    product_data = {
+        "id": product.id,
+        "name": product.name,
+        "description": product.description,
+        "brand": product.brand,
+        "category": product.category,
+        "price": str(product.price),
+        "stock": product.stock,
+        "created_at": product.created_at,
+        "updated_at": product.updated_at
+    }
+
+    return JsonResponse({"status": "success", "product": product_data})
+
+@csrf_exempt
+@login_required
+@user_passes_test(is_admin)
+def edit_product(request, product_id):
+    if request.method != "PUT":
+        return JsonResponse({"status": "error", "message": "Only PUT allowed"}, status=405)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    name = data.get("name")
+    description = data.get("description")
+    brand = data.get("brand")
+    category = data.get("category")
+    price = data.get("price")
+    stock = data.get("stock")
+
+    if name:
+        product.name = name
+    if description:
+        product.description = description
+    if brand:
+        product.brand = brand
+    if category:
+        product.category = category
+    if price is not None:
+        try:
+            product.price = float(price)
+        except ValueError:
+            return JsonResponse({"status": "error", "message": "Invalid price value"}, status=400)
+    if stock is not None:
+        try:
+            product.stock = int(stock)
+        except ValueError:
+            return JsonResponse({"status": "error", "message": "Invalid stock value"}, status=400)
+
+    product.save()
+
+    return JsonResponse({"status": "success", "message": "Product updated successfully"})
+
+@csrf_exempt
+@login_required 
+@user_passes_test(is_admin)
+def delete_product(request, product_id):        
+    if request.method != "DELETE":
+        return JsonResponse({"status": "error", "message": "Only DELETE allowed"}, status=405)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+
+    product.delete()
+
+    return JsonResponse({"status": "success", "message": "Product deleted successfully"})   
