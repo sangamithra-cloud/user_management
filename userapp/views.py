@@ -7,8 +7,8 @@ from django.contrib.auth.decorators import login_required,user_passes_test
 import json
 import random
 import time
-from .models import Product
- 
+from .models import Product, Cart, CartItem, Wishlist   
+from django.db import transaction
 
 User = get_user_model()
 
@@ -84,6 +84,8 @@ def user_signup(request):
     request.session['username'] = username
     request.session.set_expiry(300) 
 
+    print(f"OTP for {email}: {otp}")  # For testing purposes
+    print(f"User {username} created. Verification email sent to {email}.")
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
 
 
@@ -558,34 +560,204 @@ def user_view_products(request):
         }
         for p in products
     ]   
-    return JsonResponse({"status": "success,To view all the products", "products": products_data})
+    return JsonResponse({"status": "success", "message": "To view all the products", "products": products_data})
 
-@csrf_exempt
-@login_required 
+
+
+@csrf_exempt 
+@login_required
 def add_to_cart(request):
-    pass  # Implement cart addition logic here  
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    product_id = data.get("product_id")
+    quantity = data.get("quantity", 1)
+
+    try:
+        quantity = int(quantity)
+        if quantity < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        return JsonResponse({"status": "error", "message": "Quantity must be a positive integer"}, status=400)
+
+    if not product_id:
+        return JsonResponse({"status": "error", "message": "Product ID is required"}, status=400)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+
+    with transaction.atomic():
+       
+        product = Product.objects.select_for_update().get(id=product_id)
+
+        if product.stock < quantity:
+            return JsonResponse({"status": "error", "message": "Insufficient stock"}, status=400)
+
+        cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product)
+        if not item_created:
+            cart_item.quantity += quantity
+        else:
+            cart_item.quantity = quantity
+        cart_item.save()
+
+ 
+        product.stock -= quantity
+        product.save()
+
+    return JsonResponse({
+        "status": "success",
+        "message": "Product added to cart",
+        "product_id": product.id,
+        "quantity": cart_item.quantity
+    })
 
 @csrf_exempt
 @login_required
 def view_cart(request):
-    pass  # Implement cart viewing logic here   
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Only GET allowed"}, status=405)
 
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        return JsonResponse({"status": "success", "cart_items": []})  # Empty cart
+
+    cart_items = CartItem.objects.filter(cart=cart)
+    items_data = [
+        {
+            "product_id": item.product.id,
+            "product_name": item.product.name,
+            "quantity": item.quantity,
+            "price_per_item": str(item.product.price),
+            "total_price": str(item.product.price * item.quantity)
+        }
+        for item in cart_items
+    ]
+
+    return JsonResponse({"status": "success", "cart_items": items_data})
 @csrf_exempt
 @login_required
 def remove_from_cart(request):
-    pass  # Implement cart removal logic here
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    product_id = data.get("product_id")
+
+    if not product_id:
+        return JsonResponse({"status": "error", "message": "Product ID is required"}, status=400)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Cart not found"}, status=404)
+
+    try:
+       with transaction.atomic():
+         cart_item = CartItem.objects.get(cart=cart, product=product)
+         quantity_to_restore = cart_item.quantity
+         cart_item.delete()
+         product.stock += quantity_to_restore
+         product.save()
+
+    except CartItem.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Item not in cart"}, status=404)
+
+    return JsonResponse({"status": "success", "message": f"Product {product.name} removed from cart"})
 
 @csrf_exempt
 @login_required 
 def add_to_wishlist(request):
-    pass  # Implement wishlist addition logic here  
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:    
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+    product_id = data.get("product_id")
+    if not product_id:
+        return JsonResponse({"status": "error", "message": "Product ID is required"}, status=400)
+    try:
+        product = Product.objects.get(id=product_id)    
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+    wishlist, _ = Wishlist.objects.get_or_create(user=request.user)
+    wishlist.products.add(product)
+    return JsonResponse({"status": "success", "message": f"Product {product.name} added to wishlist"})
+
+
+
 
 @csrf_exempt
 @login_required
 def view_wishlist(request):
-    pass  # Implement wishlist viewing logic here
+    if request.method != "GET":
+        return JsonResponse({"status": "error", "message": "Only GET allowed"}, status=405)
+
+    try:
+        wishlist = Wishlist.objects.get(user=request.user)
+    except Wishlist.DoesNotExist:
+        return JsonResponse({"status": "success", "wishlist_items": []})  # Empty wishlist
+
+    products = wishlist.products.all()
+    products_data = [
+        {
+            "product_id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "brand": p.brand,
+            "category": p.category,
+            "price": str(p.price),
+            "stock": p.stock
+        }
+        for p in products
+    ]
+
+    return JsonResponse({"status": "success", "wishlist_items": products_data})
 
 @csrf_exempt
 @login_required 
 def remove_from_wishlist(request):
-    pass  # Implement wishlist removal logic here
+    if request.method != "POST":
+        return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+
+    product_id = data.get("product_id")
+
+    if not product_id:
+        return JsonResponse({"status": "error", "message": "Product ID is required"}, status=400)
+
+    try:
+        product = Product.objects.get(id=product_id)
+    except Product.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
+
+    try:
+        wishlist = Wishlist.objects.get(user=request.user)
+        wishlist.products.remove(product)
+    except Wishlist.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Wishlist not found"}, status=404)
+
+    return JsonResponse({"status": "success", "message": f"Product {product.name} removed from wishlist"})
