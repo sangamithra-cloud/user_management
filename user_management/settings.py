@@ -4,7 +4,7 @@ Django settings for user_management project.
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv  
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -97,14 +97,17 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # needed for collectstatic 
 AUTH_USER_MODEL = 'userapp.User'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 EMAIL_HOST = 'smtp.elasticemail.com'
-EMAIL_PORT = 2525  # or 587 for TLS
+EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'default@example.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
-DEFAULT_FROM_EMAIL = 'noreply@uniqnex360.com'
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  
+
 
 
 
