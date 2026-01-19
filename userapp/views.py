@@ -24,7 +24,7 @@ def generate_otp(email):
         "otp": otp,
         "timestamp": time.time()
     }
-    print(f"OTP for {email}: {otp}")  # Console shows OTP for Postman
+  
     return otp
 
 
@@ -74,7 +74,8 @@ def user_signup(request):
     subject = "Your OTP Verification Code"
     html_content = f"<p>Hello {username},<br>Your OTP is <b>{otp}</b><br>It is valid for 5 minutes.</p>"
 
-    status, resp = send_email_brevo(email, subject, html_content, sender_email="noreply@yourapp.com", sender_name="YourApp")
+    status, resp = send_email_brevo(email, subject, html_content, 
+                                    sender_email="sangamithra@uniqnex360.com", sender_name="uniqnex360")
 
     if status not in [200, 201]:
         return JsonResponse({"status": "error", "message": "Failed to send OTP email via Brevo", "detail": resp}, status=500)
@@ -83,8 +84,7 @@ def user_signup(request):
     request.session['username'] = username
     request.session.set_expiry(300) 
 
-    print(f"OTP for {email}: {otp}")  # For testing purposes
-    print(f"User {username} created. Verification email sent to {email}.")
+ 
    
    
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
@@ -142,7 +142,9 @@ def resend_otp(request):
     
     subject = "Your OTP Verification Code - Resent"
     html_content = f"<p>Hello {username},<br>Your new OTP is <b>{otp}</b><br>It is valid for 5 minutes.</p>"
-    status, resp = send_email_brevo(email, subject, html_content, sender_email="noreply@yourapp.com", sender_name="YourApp")
+    status, resp = send_email_brevo(email, subject, html_content, 
+                                    sender_email="sangamithra@uniqnex360.com",
+                                     sender_name="uniqnex360")
 
     if status not in [200, 201]:
         return JsonResponse({"status": "error", "message": "Failed to send OTP email via Brevo", "detail": resp}, status=500)
@@ -224,8 +226,8 @@ def forgot_password(request):
         to_email=email,
         subject=subject,
         html_content=html_content,
-        sender_email="noreply@yourapp.com",
-        sender_name="YourApp"
+        sender_email="sangamithra@uniqnex360.com",
+        sender_name="uniqnex360"
     )
     
     if status not in [200, 201]:
