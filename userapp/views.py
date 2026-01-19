@@ -38,7 +38,6 @@ def index(request):
 
 
 
-
 @csrf_exempt
 def user_signup(request):
     if request.method != "POST":
@@ -49,45 +48,45 @@ def user_signup(request):
     except json.JSONDecodeError:
         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
-    username = data.get("username")
     email = data.get("email")
     password = data.get("password")
+    username = data.get("username") or email  # optional display name
 
-    if not username or not email or not password:
-        return JsonResponse({"status": "error", "message": "All fields are required"}, status=400)
-
-    if User.objects.filter(username=email).exists():
-        return JsonResponse({"status": "error", "message": "Username already exists"}, status=400)
+    if not email or not password:
+        return JsonResponse({"status": "error", "message": "Email and password required"}, status=400)
 
     if User.objects.filter(email=email).exists():
         return JsonResponse({"status": "error", "message": "Email already exists"}, status=400)
 
-    # Create inactive user
-    user = User.objects.create_user(username=username, email=email, password=password)
-    user.is_active = False
-    user.save()
+    try:
+        # set username=email for login consistency
+        user = User.objects.create_user(username=email, email=email, password=password)
+        user.is_active = False
+        user.save()
+    except ValidationError as e:
+        return JsonResponse({"status": "error", "message": e.messages}, status=400)
 
-    # Generate OTP
-    otp=generate_otp(email)
-    
-    
+    otp = generate_otp(email)
     subject = "Your OTP Verification Code"
     html_content = f"<p>Hello {username},<br>Your OTP is <b>{otp}</b><br>It is valid for 5 minutes.</p>"
 
-    status, resp = send_email_brevo(email, subject, html_content, 
-                                    sender_email="sangamithra@uniqnex360.com", sender_name="uniqnex360")
+    try:
+        status, resp = send_email_brevo(
+            email, subject, html_content,
+            sender_email="sangamithra@uniqnex360.com",
+            sender_name="uniqnex360"
+        )
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": "Failed to send OTP email", "detail": str(e)}, status=500)
 
     if status not in [200, 201]:
-        return JsonResponse({"status": "error", "message": "Failed to send OTP email via Brevo", "detail": resp}, status=500)
-    
-    request.session['verify_email'] = email
-    request.session['username'] = username
-    request.session.set_expiry(300) 
+        return JsonResponse({"status": "error", "message": "Brevo rejected email", "detail": resp}, status=500)
 
- 
-   
-   
+    request.session['verify_email'] = email
+    request.session.set_expiry(300)
+
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
+
 
 
 
@@ -191,6 +190,7 @@ def login_view(request):
 
 
 @csrf_exempt
+@login_required
 def logout_view(request):
     logout(request)
     return JsonResponse({"status": "success", "message": "Logged out successfully"})
