@@ -9,6 +9,7 @@ import random
 import time
 from .models import Product, Cart, CartItem, Wishlist   
 from django.db import transaction
+from .brevo_email import send_email_brevo   
 
 User = get_user_model()
 
@@ -68,24 +69,24 @@ def user_signup(request):
 
     # Generate OTP
     otp=generate_otp(email)
+    
+    
+    subject = "Your OTP Verification Code"
+    html_content = f"<p>Hello {username},<br>Your OTP is <b>{otp}</b><br>It is valid for 5 minutes.</p>"
 
-    try:
-        send_mail(
-            "Your OTP Verification Code",
-            f"Hello {username},\n\nYour OTP is: {otp}\nIt is valid for 5 minutes.",
-            "sangamithra@uniqnex360.com",  
-            [email],
-            fail_silently=False,
-        )
-    except Exception as e:
-     
-        return JsonResponse({"status": "error", "message": "Failed to send OTP email"}, status=500)
+    status, resp = send_email_brevo(email, subject, html_content, sender_email="noreply@yourapp.com", sender_name="YourApp")
+
+    if status not in [200, 201]:
+        return JsonResponse({"status": "error", "message": "Failed to send OTP email via Brevo", "detail": resp}, status=500)
+    
     request.session['verify_email'] = email
     request.session['username'] = username
     request.session.set_expiry(300) 
 
     print(f"OTP for {email}: {otp}")  # For testing purposes
     print(f"User {username} created. Verification email sent to {email}.")
+   
+   
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
 
 
@@ -138,17 +139,13 @@ def resend_otp(request):
 
     otp = random.randint(100000, 999999)
     OTP_STORE[email] = {'otp': otp, 'timestamp': time.time()}
+    
+    subject = "Your OTP Verification Code - Resent"
+    html_content = f"<p>Hello {username},<br>Your new OTP is <b>{otp}</b><br>It is valid for 5 minutes.</p>"
+    status, resp = send_email_brevo(email, subject, html_content, sender_email="noreply@yourapp.com", sender_name="YourApp")
 
-    try:
-        send_mail(
-            "Your OTP Verification Code",
-            f"Hello {username},\n\nYour OTP is: {otp}\nIt is valid for 5 minutes.",
-            "sangamithra@uniqnex360.com",  
-            [email],
-            fail_silently=False,
-        )
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": "Failed to send OTP email"}, status=500)
+    if status not in [200, 201]:
+        return JsonResponse({"status": "error", "message": "Failed to send OTP email via Brevo", "detail": resp}, status=500)
 
     return JsonResponse({"status": "success", "message": f"New OTP sent to {email}"})
 
@@ -221,16 +218,18 @@ def forgot_password(request):
     otp = random.randint(100000, 999999)
     OTP_STORE[email] = {'otp': otp, 'timestamp': time.time()}
 
-   
-   
-
-    
-    send_mail(
-        "Password Reset OTP",
-        f"Your OTP is {otp}",
-        'noreply@example.com',
-        [email],
+    subject = "Your Password Reset OTP"
+    html_content = f"<p>Hello,<br>Your OTP for password reset is <b>{otp}</b><br>It is valid for 5 minutes.</p>"
+    status, resp = send_email_brevo(
+        to_email=email,
+        subject=subject,
+        html_content=html_content,
+        sender_email="noreply@yourapp.com",
+        sender_name="YourApp"
     )
+    
+    if status not in [200, 201]:
+        return JsonResponse({"status": "error", "message": "Failed to send OTP email via Brevo", "detail": resp}, status=500)
 
     request.session['reset_email'] = email
   

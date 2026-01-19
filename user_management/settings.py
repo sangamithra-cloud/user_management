@@ -96,19 +96,19 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # needed for collectstatic 
 # CUSTOM USER MODEL
 AUTH_USER_MODEL = 'userapp.User'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-EMAIL_HOST = 'smtp.elasticemail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+# EMAIL_HOST = 'smtp.elasticemail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
 
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-
-
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
 
+# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  
+
+BREVO_API_KEY = os.getenv("BREVO_API_KEY") 
 
 
 # LOGIN/LOGOUT REDIRECTS
