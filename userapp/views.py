@@ -46,6 +46,7 @@ def user_signup(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
+        print("Invalid JSON in request body")
         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
     email = data.get("email")
@@ -54,8 +55,8 @@ def user_signup(request):
     
     print(email,password,username)
 
-    if not email or not password:
-        return JsonResponse({"status": "error", "message": "Email and password required"}, status=400)
+    if not email or not password or not username:
+        return JsonResponse({"status": "error", "message": "Email, password and username required"}, status=400)
 
     if User.objects.filter(email=email).exists():
         return JsonResponse({"status": "error", "message": "Email already exists"}, status=400)
@@ -67,6 +68,7 @@ def user_signup(request):
         user.save()
 
     except ValidationError as e:
+        print("Validation error during user creation:", e.messages)
         return JsonResponse({"status": "error", "message": e.messages}, status=400)
 
     otp = generate_otp(email)
@@ -80,6 +82,7 @@ def user_signup(request):
             sender_name="uniqnex360"
         )
     except Exception as e:
+        print("Error sending email via Brevo:", str(e))
         return JsonResponse({"status": "error", "message": "Failed to send OTP email", "detail": str(e)}, status=500)
 
     if status not in [200, 201]:
