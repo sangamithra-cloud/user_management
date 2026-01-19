@@ -68,7 +68,9 @@ def user_signup(request):
         user.save()
 
     except ValidationError as e:
-        print("Validation error during user creation:", e.messages)
+        import traceback
+        print(traceback.format_exc()) 
+        
         return JsonResponse({"status": "error", "message": e.messages}, status=400)
 
     otp = generate_otp(email)
@@ -174,7 +176,7 @@ def login_view(request):
     email = data.get('email')
     password = data.get('password')
      
-    print(email,password)
+    # print(email,password)
 
     if not email or not password:
         return JsonResponse({"status": "error", "message": "Email and password are required"}, status=400)

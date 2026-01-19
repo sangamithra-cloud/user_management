@@ -4,6 +4,7 @@ Django settings for user_management project.
 
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv  
 
 # Build paths inside the project
@@ -60,12 +61,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'user_management.wsgi.application'
 
-# DATABASE
+# # DATABASE
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+
+
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+    )
 }
 
 # PASSWORD VALIDATION
@@ -110,6 +120,7 @@ AUTH_USER_MODEL = 'userapp.User'
 # DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY") 
+
 
 
 
