@@ -5,6 +5,8 @@ djangorestframework>=3.14,<4.0
 # Database drivers
 psycopg2-binary>=2.9  # PostgreSQL
 mysqlclient>=2.1      # MySQL
+dj-database-url>=1.0
+
 
 # Environment management
 python-dotenv>=1.0
@@ -17,3 +19,5 @@ Pillow>=10.0           # For image handling
 django-crispy-forms>=2.0
 gunicorn>=21.0         # For deployment
 requests>=2.30         # For making HTTP requests
+
+
