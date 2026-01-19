@@ -16,3 +16,4 @@ django-allauth>=1.0
 Pillow>=10.0           # For image handling
 django-crispy-forms>=2.0
 gunicorn>=21.0         # For deployment
+requests>=2.30         # For making HTTP requests
