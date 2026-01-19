@@ -110,6 +110,8 @@ AUTH_USER_MODEL = 'userapp.User'
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY") 
 
+print(os.getenv("BREVO_API_KEY"))
+
 
 # LOGIN/LOGOUT REDIRECTS
 LOGIN_URL = 'login'

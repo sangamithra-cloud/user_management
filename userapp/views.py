@@ -50,7 +50,9 @@ def user_signup(request):
 
     email = data.get("email")
     password = data.get("password")
-    username = data.get("username") or email  # optional display name
+    username = data.get("username")  
+    
+    print(email,password,username)
 
     if not email or not password:
         return JsonResponse({"status": "error", "message": "Email and password required"}, status=400)
@@ -59,10 +61,11 @@ def user_signup(request):
         return JsonResponse({"status": "error", "message": "Email already exists"}, status=400)
 
     try:
-        # set username=email for login consistency
-        user = User.objects.create_user(username=email, email=email, password=password)
+        
+        user = User.objects.create_user(username=username, email=email, password=password)
         user.is_active = False
         user.save()
+
     except ValidationError as e:
         return JsonResponse({"status": "error", "message": e.messages}, status=400)
 
@@ -84,7 +87,11 @@ def user_signup(request):
 
     request.session['verify_email'] = email
     request.session.set_expiry(300)
-
+    
+    print("User created and OTP sent via Brevo", otp)
+    print("Brevo response:", resp)
+    print("Session data:", request.session.items())
+    
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
 
 
@@ -163,6 +170,8 @@ def login_view(request):
 
     email = data.get('email')
     password = data.get('password')
+     
+    print(email,password)
 
     if not email or not password:
         return JsonResponse({"status": "error", "message": "Email and password are required"}, status=400)
@@ -178,6 +187,10 @@ def login_view(request):
         return JsonResponse({"status": "error", "message": "Your account has been blocked. Contact admin."}, status=403)
 
     login(request, user)
+    
+    print(user.is_superuser)
+    print(user.username)
+    print(user.email)
 
     if user.is_superuser:
         return JsonResponse({
@@ -342,14 +355,14 @@ def edit_user(request, user_id): #Admin can edit user details
     username = data.get("username")
     email = data.get("email")
     is_active = data.get("is_active")
-
+    
     if username:
         user.username = username
     if email:
         user.email = email
     if is_active is not None:
         user.is_active = is_active
-
+    
     user.save()
    
 
