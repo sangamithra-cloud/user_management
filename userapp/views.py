@@ -16,7 +16,7 @@ User = get_user_model()
 
 # Temporary OTP store
 OTP_STORE = {}
-OTP_VALIDITY = 600  # 10 minutes
+OTP_VALIDITY = 300  #5 minutes
 
 def generate_otp(email):
     otp = random.randint(100000, 999999)
@@ -199,16 +199,7 @@ def login_view(request):
         return JsonResponse({"status": "success", "message": "user Logged in successfully"})
 
 
-@csrf_exempt
-@login_required
-def logout_view(request):
-    logout(request)
-    return JsonResponse({"status": "success", "message": "Logged out successfully"})
 
-
-@login_required
-def home(request):
-    return JsonResponse({"status": "success", "message": f"Welcome {request.user.username}"})
 
 @csrf_exempt
 def forgot_password(request):
@@ -297,7 +288,16 @@ def reset_password(request):
     return JsonResponse({"status": "success", "message": "Password reset successful ,login with new password"})
 
 
+@csrf_exempt
+@login_required
+def logout_view(request):
+    logout(request)
+    return JsonResponse({"status": "success", "message": "Logged out successfully"})
 
+
+@login_required
+def home(request):
+    return JsonResponse({"status": "success", "message": f"Welcome {request.user.username}"})
 
 #Admin Views 
 
