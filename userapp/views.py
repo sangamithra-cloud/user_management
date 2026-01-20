@@ -16,7 +16,7 @@ User = get_user_model()
 
 # Temporary OTP store
 OTP_STORE = {}
-OTP_VALIDITY = 300  # 5 minutes
+OTP_VALIDITY = 600  # 10 minutes
 
 def generate_otp(email):
     otp = random.randint(100000, 999999)
@@ -46,14 +46,12 @@ def user_signup(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        print("Invalid JSON in request body")
         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
 
     email = data.get("email")
     password = data.get("password")
     username = data.get("username")  
-    
-    print(email,password,username)
+   
 
     if not email or not password or not username:
         return JsonResponse({"status": "error", "message": "Email, password and username required"}, status=400)
@@ -68,8 +66,8 @@ def user_signup(request):
         user.save()
 
     except ValidationError as e:
-        import traceback
-        print(traceback.format_exc()) 
+      
+      
         
         return JsonResponse({"status": "error", "message": e.messages}, status=400)
 
@@ -84,7 +82,7 @@ def user_signup(request):
             sender_name="uniqnex360"
         )
     except Exception as e:
-        print("Error sending email via Brevo:", str(e))
+        
         return JsonResponse({"status": "error", "message": "Failed to send OTP email", "detail": str(e)}, status=500)
 
     if status not in [200, 201]:
@@ -92,10 +90,7 @@ def user_signup(request):
 
     request.session['verify_email'] = email
     request.session.set_expiry(300)
-    
-    print("User created and OTP sent via Brevo", otp)
-    print("Brevo response:", resp)
-    print("Session data:", request.session.items())
+  
     
     return JsonResponse({"status": "success", "message": "User created successfully"}, status=201)
 
@@ -176,7 +171,7 @@ def login_view(request):
     email = data.get('email')
     password = data.get('password')
      
-    # print(email,password)
+   
 
     if not email or not password:
         return JsonResponse({"status": "error", "message": "Email and password are required"}, status=400)
@@ -193,10 +188,7 @@ def login_view(request):
 
     login(request, user)
     
-    print(user.is_superuser)
-    print(user.username)
-    print(user.email)
-
+  
     if user.is_superuser:
         return JsonResponse({
         "status": "success",
@@ -269,7 +261,7 @@ def reset_password(request):
     if not email:
         return JsonResponse({"status": "error", "message": "Session expired. Please try again."}, status=400)
 
-    # Parse JSON from request body
+  
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -460,54 +452,7 @@ def add_product(request):
         "product_ids": added_products
     })
 
-# #add product 
-# @csrf_exempt
-# @login_required
-# @user_passes_test(is_admin)
-# def add_product(request):
-#     if request.method != "POST":
-#         return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
 
-#     try:
-#         data = json.loads(request.body)
-#     except json.JSONDecodeError:
-#         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
-#     if isinstance(data, dict):
-#         data = [data]
-#     elif not isinstance(data, list):
-#         return JsonResponse({"status": "error", "message": "Invalid JSON format"}, status=400)
-    
-
-#     added_products = []
-#     for item in data:
-#         name = item.get("name")
-#         description = item.get("description")
-#         brand = item.get("brand")
-#         category = item.get("category")
-#         price = item.get("price")
-#         stock = item.get("stock")
-
-#     if not all([name, description, brand, category, price, stock]):
-#         return JsonResponse({"status": "error", "message": "All fields are required"}, status=400)
-
-#     try:
-#         price = float(price)
-#         stock = int(stock)
-#     except ValueError:
-#         return JsonResponse({"status": "error", "message": "Invalid price or stock value"}, status=400)
-
-#     from userapp.models import Product  # Import here to avoid circular import
-
-#     product = Product.objects.create(
-#         name=name,
-#         description=description,
-#         brand=brand,
-#         category=category,
-#         price=price,
-#         stock=stock
-#     )
-
-#     return JsonResponse({"status": "success", "message": "Product added successfully", "product_id": product.id})
 
 #to view all products
 @csrf_exempt
@@ -564,6 +509,7 @@ def view_product(request, product_id):
 
     return JsonResponse({"status": "success", "product": product_data})
 
+#to edit a product
 @csrf_exempt
 @login_required
 @user_passes_test(is_admin)
@@ -611,6 +557,7 @@ def edit_product(request, product_id):
 
     return JsonResponse({"status": "success", "message": "Product updated successfully"})
 
+#to delete a product
 @csrf_exempt
 @login_required 
 @user_passes_test(is_admin)
@@ -652,7 +599,7 @@ def user_view_products(request):
     return JsonResponse({"status": "success", "message": "To view all the products", "products": products_data})
 
 
-
+# Add to cart
 @csrf_exempt 
 @login_required
 def add_to_cart(request):
@@ -709,6 +656,7 @@ def add_to_cart(request):
         "quantity": cart_item.quantity
     })
 
+# View cart
 @csrf_exempt
 @login_required
 def view_cart(request):
@@ -733,6 +681,8 @@ def view_cart(request):
     ]
 
     return JsonResponse({"status": "success", "cart_items": items_data})
+
+# Remove from cart
 @csrf_exempt
 @login_required
 def remove_from_cart(request):
@@ -772,6 +722,8 @@ def remove_from_cart(request):
 
     return JsonResponse({"status": "success", "message": f"Product {product.name} removed from cart"})
 
+# Wishlist Views
+# Add to wishlist
 @csrf_exempt
 @login_required 
 def add_to_wishlist(request):
@@ -794,7 +746,7 @@ def add_to_wishlist(request):
 
 
 
-
+# View wishlist
 @csrf_exempt
 @login_required
 def view_wishlist(request):
@@ -822,6 +774,7 @@ def view_wishlist(request):
 
     return JsonResponse({"status": "success", "wishlist_items": products_data})
 
+# Remove from wishlist
 @csrf_exempt
 @login_required 
 def remove_from_wishlist(request):

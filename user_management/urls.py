@@ -37,18 +37,20 @@ urlpatterns = [
     path('admin-dashboard/users/<int:user_id>/block/', views.block_user, name='block_user'),# Block/Unblock user
    
    # ADMIN  Product management routes
-    path('admin-dashboard/products/add/', views.add_product, name='add_product'),   # Add product
     path('admin-dashboard/products/', views.view_all_product, name='view_products'),  # View all products
+    path('admin-dashboard/products/add/', views.add_product, name='add_product'),   # Add product
     path('admin-dashboard/products/<int:product_id>/', views.view_product, name='view_product'), # View product details
     path('admin-dashboard/products/<int:product_id>/edit/', views.edit_product, name='edit_product'), # Edit product
     path('admin-dashboard/products/<int:product_id>/delete/', views.delete_product, name='delete_product'), # Delete product
 
     # User routes
     path("user/products/", views.user_view_products, name="user_view_products"),  # View all products
-    path("user/cart/add/", views.add_to_cart, name="add_to_cart"),  # Add to cart
+    
     path("user/cart/", views.view_cart, name="view_cart"),  # View cart 
+    path("user/cart/add/", views.add_to_cart, name="add_to_cart"),  # Add to cart
     path("user/cart/remove/", views.remove_from_cart, name="remove_from_cart"),  # Remove from cart 
-    path("user/wishlist/add/", views.add_to_wishlist, name="add_to_wishlist"),  # Add to wishlist
+    
     path("user/wishlist/", views.view_wishlist, name="view_wishlist"),  # View wishlist
+    path("user/wishlist/add/", views.add_to_wishlist, name="add_to_wishlist"),  # Add to wishlist
     path("user/wishlist/remove/", views.remove_from_wishlist, name="remove_from_wishlist"),  # Remove from wishlist
 ]
