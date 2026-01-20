@@ -401,7 +401,6 @@ def block_user(request, user_id):
     return JsonResponse({"status": "success", "message": f"User {status_msg} successfully"})
 
 
-#add product 
 @csrf_exempt
 @login_required
 @user_passes_test(is_admin)
@@ -413,35 +412,102 @@ def add_product(request):
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+    
+   
+    if isinstance(data, dict):
+        data = [data]
+    elif not isinstance(data, list):
+        return JsonResponse({"status": "error", "message": "Invalid JSON format"}, status=400)
 
-    name = data.get("name")
-    description = data.get("description")
-    brand = data.get("brand")
-    category = data.get("category")
-    price = data.get("price")
-    stock = data.get("stock")
+    added_products = []  
 
-    if not all([name, description, brand, category, price, stock]):
-        return JsonResponse({"status": "error", "message": "All fields are required"}, status=400)
+    for item in data:
+        name = item.get("name")
+        description = item.get("description")
+        brand = item.get("brand")
+        category = item.get("category")
+        price = item.get("price")
+        stock = item.get("stock")
 
-    try:
-        price = float(price)
-        stock = int(stock)
-    except ValueError:
-        return JsonResponse({"status": "error", "message": "Invalid price or stock value"}, status=400)
+      
+        if not all([name, description, brand, category, price, stock]):
+            continue  
+        
+        try:
+            price = float(price)  
+            stock = int(stock)    
+        except ValueError:
+            continue  
 
-    from userapp.models import Product  # Import here to avoid circular import
+      
 
-    product = Product.objects.create(
-        name=name,
-        description=description,
-        brand=brand,
-        category=category,
-        price=price,
-        stock=stock
-    )
+        product = Product.objects.create(
+            name=name,
+            description=description,
+            brand=brand,
+            category=category,
+            price=price,
+            stock=stock
+        )
+        
+      
+        added_products.append(product.id)
 
-    return JsonResponse({"status": "success", "message": "Product added successfully", "product_id": product.id})
+    
+    return JsonResponse({
+        "status": "success",
+        "message": f"Added {len(added_products)} products successfully.",
+        "product_ids": added_products
+    })
+
+# #add product 
+# @csrf_exempt
+# @login_required
+# @user_passes_test(is_admin)
+# def add_product(request):
+#     if request.method != "POST":
+#         return JsonResponse({"status": "error", "message": "Only POST allowed"}, status=405)
+
+#     try:
+#         data = json.loads(request.body)
+#     except json.JSONDecodeError:
+#         return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
+#     if isinstance(data, dict):
+#         data = [data]
+#     elif not isinstance(data, list):
+#         return JsonResponse({"status": "error", "message": "Invalid JSON format"}, status=400)
+    
+
+#     added_products = []
+#     for item in data:
+#         name = item.get("name")
+#         description = item.get("description")
+#         brand = item.get("brand")
+#         category = item.get("category")
+#         price = item.get("price")
+#         stock = item.get("stock")
+
+#     if not all([name, description, brand, category, price, stock]):
+#         return JsonResponse({"status": "error", "message": "All fields are required"}, status=400)
+
+#     try:
+#         price = float(price)
+#         stock = int(stock)
+#     except ValueError:
+#         return JsonResponse({"status": "error", "message": "Invalid price or stock value"}, status=400)
+
+#     from userapp.models import Product  # Import here to avoid circular import
+
+#     product = Product.objects.create(
+#         name=name,
+#         description=description,
+#         brand=brand,
+#         category=category,
+#         price=price,
+#         stock=stock
+#     )
+
+#     return JsonResponse({"status": "success", "message": "Product added successfully", "product_id": product.id})
 
 #to view all products
 @csrf_exempt
@@ -465,7 +531,11 @@ def view_all_product(request):
         }
         for p in products
     ]   
-    return JsonResponse({"status": "success,To view all the products", "products": products_data})  
+
+    if not products_data:
+        return JsonResponse({"status": "success", "message": "No products available"}, status=200)  
+    
+    return JsonResponse({"status": "success", "message": "To view all the products", "products": products_data})  
 
 #to view a single product details
 @csrf_exempt
